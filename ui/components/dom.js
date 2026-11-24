@@ -98,21 +98,51 @@ export function vibrate(ms = 30) {
 
 const FOCUSABLE = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** Hộp thoại đơn giản dạng bảng trượt có bẫy tiêu điểm Tab + trả tiêu điểm khi đóng (KCS M6). */
+/** Các bảng trượt đang mở (hàm đóng của từng bảng) — để router đóng hết khi đổi route (KCS lần 4 H1). */
+const openSheets = new Set();
+
+/** Đóng mọi bảng trượt đang mở và chắc chắn gỡ inert của #app; router gọi trước khi vẽ route mới. */
+export function closeAllSheets() {
+  for (const close of [...openSheets]) close({ instant: true });
+  document.querySelectorAll(".sheet-wrap").forEach((x) => x.remove());
+  const appEl = document.getElementById("app");
+  if (appEl) appEl.inert = false;
+}
+
+/**
+ * Hộp thoại đơn giản dạng bảng trượt có bẫy tiêu điểm Tab + inert nền + aria-labelledby + trả tiêu điểm khi đóng (KCS M6 + L3).
+ * Mọi đường đóng (✕, Esc, bấm nền, đổi route / nút Back, bảng bị gỡ khỏi DOM) đều qua close(): gỡ inert, gỡ trình nghe, trả tiêu điểm.
+ */
 export function sheet(content, { onClose } = {}) {
   const prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const appEl = document.getElementById("app");
   let closed = false;
   const closeBtn = h("button.sheet-close", { type: "button", "aria-label": t("c.close"), title: t("c.close"), onclick: () => close() }, "✕");
   const panel = h("div.sheet", { role: "dialog", "aria-modal": "true", tabindex: "-1" }, closeBtn, content);
-  const close = () => {
+  const heading = panel.querySelector("h1, h2, h3");
+  if (heading) {
+    if (!heading.id) heading.id = `sheet-title-${Date.now()}`;
+    panel.setAttribute("aria-labelledby", heading.id);
+  } else {
+    panel.setAttribute("aria-label", t("c.dialog"));
+  }
+  let watcher = null;
+  const close = (opts) => {
     if (closed) return;
     closed = true;
-    wrap.classList.add("closing");
-    setTimeout(() => wrap.remove(), 200);
+    openSheets.delete(close);
+    watcher?.disconnect();
     document.removeEventListener("keydown", onKey);
+    window.removeEventListener("hashchange", onNav);
+    window.removeEventListener("popstate", onNav);
+    wrap.classList.add("closing");
+    if (opts?.instant === true) wrap.remove();
+    else setTimeout(() => wrap.remove(), 200);
+    if (appEl && !openSheets.size) appEl.inert = false;
     if (prevFocus && prevFocus.isConnected) prevFocus.focus({ preventScroll: true });
     onClose?.();
   };
+  const onNav = () => close({ instant: true });
   const onKey = (e) => {
     if (e.key === "Escape") return close();
     if (e.key !== "Tab") return;
@@ -133,8 +163,18 @@ export function sheet(content, { onClose } = {}) {
     }
   };
   const wrap = h("div.sheet-wrap", { onclick: (e) => e.target === wrap && close() }, panel);
+  if (appEl) appEl.inert = true;
   document.body.append(wrap);
+  openSheets.add(close);
   document.addEventListener("keydown", onKey);
+  // Đổi route khi bảng còn mở (nút Back, cử chỉ Back Android, Alt+←): đóng đúng cách, không để #app kẹt inert
+  window.addEventListener("hashchange", onNav);
+  window.addEventListener("popstate", onNav);
+  // Bảng bị gỡ thẳng khỏi DOM (không qua close) cũng phải gỡ inert
+  if (typeof MutationObserver === "function") {
+    watcher = new MutationObserver(() => !wrap.isConnected && close({ instant: true }));
+    watcher.observe(document.body, { childList: true });
+  }
   setTimeout(() => closeBtn.focus({ preventScroll: true }), 10);
   return close;
 }

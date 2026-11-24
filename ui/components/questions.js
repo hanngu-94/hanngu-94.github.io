@@ -3,7 +3,7 @@
 import { h, clear, beep, vibrate, add } from "./dom.js";
 import { t, lang } from "../i18n.js";
 import * as A from "../api.js";
-import { glossInline, glossParts, glossNode, pinyinHint, rvBadge, toneHanzi, tonePinyin } from "./word.js";
+import { glossInline, glossParts, glossNode, pinyinHint, rvBadge, toneHanzi, tonePinyin, matchGloss, tinyGloss } from "./word.js";
 import { strokeQuiz } from "../writer.js";
 
 const TONE_PATHS = {
@@ -183,7 +183,7 @@ const R = {
     const leftOpts = q.options || [];
     const rightOpts = q.meta?.right || [];
     const left = leftOpts.map((o) => h("button.tile.zh", { type: "button", lang: "zh-CN", "data-key": o.key }, o.zh || o.label));
-    const right = rightOpts.map((o) => h("button.tile", { type: "button", "data-key": o.key }, ((g) => (Array.isArray(g) || g ? g : o.label))(glossInline(A.getWord(o.key), { short: true }))));
+    const right = rightOpts.map((o) => h("button.tile", { type: "button", "data-key": o.key }, ((g) => (Array.isArray(g) || g ? g : tinyGloss(o.label)))(matchGloss(A.getWord(o.key)))));
     const select = (btn, side) => {
       if (btn.classList.contains("done")) return;
       if (side === "l") A.speak(btn.textContent);

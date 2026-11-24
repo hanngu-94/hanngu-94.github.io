@@ -359,7 +359,7 @@ function unitSheet(lv, u) {
       "div.unit-sheet",
       h("div.eyebrow", `${A.levelLabel(lv)} · ${t("c.lesson")} ${u + 1}`),
       h("h2", r ? `${"★".repeat(r.stars)} · ${pct(r.best)}` : open ? t("path.newLesson") : t("path.locked")),
-      h("ul.word-chips", words.map((w) => h("li", { onclick: () => A.speakWord(w) }, h("b", { lang: "zh-CN" }, w.h), h("small", w.py), h("span", glossInline(w))))),
+      h("ul.word-chips", words.map((w) => h("li", { tabindex: "0", role: "button", onclick: () => A.speakWord(w), onkeydown: (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), A.speakWord(w)) }, h("b", { lang: "zh-CN" }, w.h), h("small", w.py), h("span", glossInline(w))))),
       open
         ? h("button.btn.primary.wide", { type: "button", onclick: () => (close(), go(`#/lesson/${lv}/${u}`)) }, r ? t("path.redo") : t("path.startLesson"))
         : h("div", h("p.muted", t("path.lockedHelp")), h("button.btn.wide", { type: "button", onclick: () => (close(), go(`#/lesson/${lv}/${u}/skip`)) }, t("path.skipTest"))),

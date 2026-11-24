@@ -1,5 +1,5 @@
 // Service worker: lưu sẵn khung app (ui/, core/) + dữ liệu (data/vocab, data/ref) để học offline.
-const VERSION = "hsk-v2-ui-8";
+const VERSION = "hsk-v2-ui-11";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "icon.svg",
   "ui/styles/tokens.css", "ui/styles/app.css",
@@ -7,6 +7,7 @@ const SHELL = [
   "ui/components/dom.js", "ui/components/word.js", "ui/components/questions.js", "ui/components/session.js",
   "ui/screens/learn.js", "ui/screens/practice.js", "ui/screens/lookup.js", "ui/screens/me.js",
   "core/pinyin.js", "core/content.js", "core/srs.js", "core/store.js", "core/lesson.js", "core/scoring.js", "core/speech.js",
+  "core/firebase-config.js", "core/sync.js", "core/sync-merge.js",
   "data/vocab/index.json",
 ];
 // Dữ liệu lớn / có thể chưa có: nạp nền, thiếu file nào bỏ qua file đó (không làm hỏng việc cài SW)
@@ -42,8 +43,8 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET") return;
-  // Thư viện viết chữ, dữ liệu nét, font: lưu dần khi dùng
-  if (/cdn\.jsdelivr\.net|fonts\.(googleapis|gstatic)\.com/.test(url.host)) {
+  // Thư viện viết chữ, dữ liệu nét, font, Firebase SDK (www.gstatic.com/firebasejs, phiên bản cố định): lưu dần khi dùng
+  if (/cdn\.jsdelivr\.net|fonts\.(googleapis|gstatic)\.com/.test(url.host) || (url.host === "www.gstatic.com" && url.pathname.startsWith("/firebasejs/"))) {
     e.respondWith(
       caches.open("hsk-cdn").then(async (c) => {
         const hit = await c.match(e.request);

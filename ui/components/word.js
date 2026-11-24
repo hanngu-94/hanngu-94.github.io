@@ -53,6 +53,19 @@ export function speakerBtn(text, cls = "", opts) {
   return h(`button.icon-btn.speak${cls}`, { type: "button", "aria-label": t("c.listen"), title: t("c.listen"), onclick: (e) => (e.stopPropagation(), A.speak(text, opts)) }, "🔊");
 }
 
+/**
+ * Dòng chữ Hán của câu ví dụ: MỘT nút thật (Tab / Enter / Space có sẵn) gồm chữ + biểu tượng 🔊;
+ * khối div.ex bao ngoài không còn role / tabindex nên không lồng phần tử tương tác (KCS lần 4 L3).
+ */
+export function exSay(text, content = text, opts) {
+  return h(
+    "button.ex-zh.ex-say",
+    { type: "button", lang: "zh-CN", title: t("c.listen"), onclick: (e) => (e.stopPropagation(), A.speak(text, opts)) },
+    h("span.ex-say-txt", content),
+    h("span.ex-say-ico", { "aria-hidden": "true" }, "🔊"),
+  );
+}
+
 /** Từ chưa có nghĩa Việt (rv:"todo" hoặc vi rỗng). */
 export const noVi = (w) => !w?.vi || w.rv === "todo";
 
@@ -74,6 +87,66 @@ export function shortGloss(text, maxParts = 2) {
   if (parts.length <= maxParts) return s.length > 64 ? `${s.slice(0, 61).trimEnd()}…` : s;
   const joined = parts.slice(0, maxParts).join("; ");
   return joined.length > 64 ? `${joined.slice(0, 61).trimEnd()}…` : `${joined}…`;
+}
+
+const OPEN_BR = "([{（［【";
+const CLOSE_BR = ")]}）］】";
+const stripBr = (s) => [...s].filter((ch) => !OPEN_BR.includes(ch) && !CLOSE_BR.includes(ch)).join("").replace(/\s+/g, " ").trim();
+
+/** Bỏ mọi đoạn trong ngoặc không cân (ngoặc mở chưa đóng: bỏ tới hết chuỗi; ngoặc đóng lẻ: bỏ ký tự đó). */
+function dropOpenBr(s) {
+  const stack = [];
+  let out = "";
+  for (const ch of s) {
+    if (OPEN_BR.includes(ch)) stack.push(out.length);
+    else if (CLOSE_BR.includes(ch)) {
+      if (!stack.length) continue;
+      stack.pop();
+    }
+    out += ch;
+  }
+  return (stack.length ? out.slice(0, stack[0]) : out).trim();
+}
+
+/**
+ * Rút gọn siêu ngắn (1 nghĩa đầu, cắt tại `;` hoặc `,` nằm ngoài ngoặc, tối đa 28 ký tự) cho ô ghép cặp trên 360 px (KCS L6).
+ * Không để ngoặc mở / đóng lẻ: nếu phải cắt giữa ngoặc thì bỏ cả phần trong ngoặc (KCS lần 4 L4).
+ */
+export function tinyGloss(text, maxLen = 28) {
+  const s = String(text || "").trim();
+  if (!s) return "";
+  // 1 nghĩa đầu: tách tại `;` `,` ở ngoài ngoặc
+  let depth = 0;
+  let end = s.length;
+  for (let i = 0; i < s.length; i += 1) {
+    const ch = s[i];
+    if (OPEN_BR.includes(ch)) depth += 1;
+    else if (CLOSE_BR.includes(ch)) depth = Math.max(0, depth - 1);
+    else if (depth === 0 && ";,；，".includes(ch) && s.slice(0, i).trim()) {
+      end = i;
+      break;
+    }
+  }
+  const first = s.slice(0, end).trim();
+  const whole = dropOpenBr(first) || stripBr(first);
+  if (whole.length <= maxLen) return whole;
+  // phải cắt: nếu điểm cắt rơi giữa ngoặc thì bỏ cả phần trong ngoặc
+  const cut = dropOpenBr(whole.slice(0, maxLen - 1)).trimEnd();
+  if (cut) return `${cut}…`;
+  // nghĩa mở đầu bằng một ngoặc dài hơn giới hạn: bỏ dấu ngoặc, giữ chữ
+  const flat = stripBr(whole);
+  return flat.length > maxLen ? `${flat.slice(0, maxLen - 1).trimEnd()}…` : flat;
+}
+
+/** Nghĩa cực gọn cho ô ghép cặp: mỗi thứ tiếng chỉ 1 nghĩa đầu (tối đa ~28 ký tự). */
+export function matchGloss(w, mode = A.settings().gloss) {
+  if (!w) return "";
+  const vi = tinyGloss(noVi(w) ? "" : w.vi, 26);
+  const en = tinyGloss(w.en, 24);
+  const showVi = vi && mode !== "en";
+  const showEn = en && (mode !== "vi" || !vi);
+  if (showVi && showEn && mode === "both") return [h("span.gl-vi", { lang: "vi" }, vi), h("span.gl-sep", { "aria-hidden": "true" }, " · "), h("span.gl-en", { lang: "en" }, en)];
+  return (mode === "en" ? en || vi : vi || en) || "";
 }
 
 /**
@@ -224,7 +297,7 @@ export function wordCard(w, { inDict = false } = {}) {
       strengthChip(w.id),
     ),
     h("div.wc-py", tonePinyin(w.py || "—", w)),
-    h("div.wc-hz", { lang: "zh-CN", onclick: () => A.speakWord(w) }, toneHanzi(w.h, w)),
+    h("div.wc-hz", { lang: "zh-CN", tabindex: "0", role: "button", "aria-label": `${w.h} — ${t("c.listen")}`, onclick: () => A.speakWord(w), onkeydown: (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), A.speakWord(w)) }, toneHanzi(w.h, w)),
     w.tr && w.tr !== w.h ? h("div.wc-tr.muted.small", `${t("w.trad")}: `, h("span", { lang: "zh-Hant" }, w.tr)) : null,
     h(
       "div.wc-actions",
@@ -250,8 +323,7 @@ export function wordCard(w, { inDict = false } = {}) {
           w.ex.map((ex) =>
             h(
               "div.ex",
-              { onclick: () => A.speak(ex.zh) },
-              h("div.ex-zh", { lang: "zh-CN" }, highlight(ex.zh, w.h), " ", speakerBtn(ex.zh, ".mini")),
+              exSay(ex.zh, highlight(ex.zh, w.h)),
               ex.py ? h("div.ex-py", ex.py) : null,
               exGloss(ex),
             ),

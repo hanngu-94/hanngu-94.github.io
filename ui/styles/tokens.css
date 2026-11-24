@@ -47,6 +47,7 @@
   --brand-edge: #922719;
   --brand-soft: #fceae7;
   --brand-ink: #fff8ee;
+  --brand-on-light: #a62f1f; /* chữ đỏ trên nền trắng (#fff): 6.97:1 cả sáng và tối (KCS M3) */
   --on-fill: #ffffff;       /* chữ trên nền màu đặc (--ok, --bad, --mid, --info, --brand, --tone-N) */
   --lv-ink: #ffffff;        /* chữ trên nền màu cấp --lvN (sáng + tối đều >= 4,5:1) */
   --brand-text: #a62f1f;   /* 6.5:1 on --brand-soft */

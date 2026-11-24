@@ -297,6 +297,8 @@ export function importAllJson(str) {
         bookmarks: Array.isArray(p.bookmarks) ? p.bookmarks.filter((x) => typeof x === "string") : [],
         searchHistory: Array.isArray(p.searchHistory) ? p.searchHistory.filter((x) => typeof x === "string").slice(0, 8) : [],
       });
+    } else {
+      resetUiPrefs();
     }
   } catch {
     /* bỏ qua */

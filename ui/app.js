@@ -1,5 +1,5 @@
 // Khởi động app: khung (sidebar desktop, thanh dưới mobile), router theo hash, PWA.
-import { h, clear, toast, setSoundGetter, go } from "./components/dom.js";
+import { h, clear, toast, setSoundGetter, go, closeAllSheets } from "./components/dom.js";
 import { t, applyLang } from "./i18n.js";
 import * as A from "./api.js";
 import { viewWelcome, viewPlacement, viewHome, viewLesson, levelPicker } from "./screens/learn.js";
@@ -85,6 +85,9 @@ function renderTop() {
 let renderId = 0;
 async function route() {
   const id = ++renderId;
+  // Trước khi vẽ route mới: đóng mọi bảng trượt và gỡ inert của #app (KCS lần 4 H1)
+  closeAllSheets();
+  app.inert = false;
   const hash = location.hash || "#/";
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
   if (!parts[0] && !A.isOnboarded()) return go("#/welcome");
@@ -93,7 +96,6 @@ async function route() {
   renderNav();
   renderTop();
   A.stopSpeaking();
-  document.querySelectorAll(".sheet-wrap").forEach((x) => x.remove());
   try {
     switch (parts[0]) {
       case undefined:

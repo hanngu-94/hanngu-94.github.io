@@ -2,7 +2,7 @@
 import { h, clear, sheet, fmtNumber, go, add } from "../components/dom.js";
 import { t, lang } from "../i18n.js";
 import * as A from "../api.js";
-import { wordCard, wordRow, speakerBtn, exGloss } from "../components/word.js";
+import { wordCard, wordRow, exSay, exGloss } from "../components/word.js";
 import { strokeAnimator } from "../writer.js";
 
 const SECTIONS = [
@@ -48,11 +48,10 @@ function examples(list = []) {
     "div.examples",
     list.map((ex) =>
       typeof ex === "string"
-        ? h("div.ex", { onclick: () => A.speak(ex) }, h("div.ex-zh", { lang: "zh-CN" }, ex, " ", speakerBtn(ex, ".mini")))
+        ? h("div.ex", exSay(ex))
         : h(
             "div.ex",
-            { onclick: () => A.speak(ex.zh || ex.h) },
-            h("div.ex-zh", { lang: "zh-CN" }, ex.zh || ex.h || "", " ", speakerBtn(ex.zh || ex.h, ".mini")),
+            exSay(ex.zh || ex.h || ""),
             ex.py ? h("div.ex-py", ex.py, ex.say && ex.say !== ex.py ? h("span.muted", ` → ${ex.say}`) : null) : null,
             exGloss(ex),
           ),
@@ -217,14 +216,21 @@ async function dict(body, arg) {
   add(body, input, recentBox, h("div.filters", levelSel, filterSel), countEl, list, h("p.src", t("dict.credit")));
   await A.loadLevel(level || A.level());
   render();
-  if (!loadedAll) {
+  const loadFull = () =>
     A.loadAll()
       .then(() => {
         loadedAll = true;
         if (body.isConnected) render();
       })
-      .catch((e) => (countEl.textContent = e.message));
-  }
+      .catch(() => {
+        if (!body.isConnected) return;
+        clear(countEl).append(
+          t("dict.loadErr"),
+          " ",
+          h("button.link.small", { type: "button", onclick: () => ((countEl.textContent = t("c.loading")), loadFull()) }, t("dict.retry")),
+        );
+      });
+  if (!loadedAll) loadFull();
 }
 
 // =============== NGỮ PHÁP ===============
@@ -353,7 +359,7 @@ async function pinyin(body) {
 
   const grid = h("table.py-table");
   add(grid, 
-    h("thead", h("tr", h("th", ""), ini.map((x) => h("th", { scope: "col" }, h("button.py-head", { type: "button", onclick: () => tip(x) }, x.i || "∅"))))),
+    h("thead", h("tr", h("th", ""), ini.map((x) => h("th", { scope: "col" }, h("button.py-head", { type: "button", "aria-label": x.i ? null : t("py.zeroInit"), onclick: () => tip(x) }, x.i || "∅"))))),
     h(
       "tbody",
       fin.map((f) =>
@@ -469,7 +475,7 @@ async function radicals(body) {
         "article.word-card",
         h("div.wc-top", h("span.chip", `${t("rad.no")} ${r.n ?? ""}`), r.strokes ? h("span.chip.soft", t("rad.strokes", { n: r.strokes })) : null),
         h("div.wc-py", r.py || ""),
-        h("div.wc-hz", { lang: "zh-CN", onclick: () => A.speak(r.char) }, r.char),
+        h("div.wc-hz", { lang: "zh-CN", tabindex: "0", role: "button", "aria-label": `${r.char} — ${t("c.listen")}`, onclick: () => A.speak(r.char), onkeydown: (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), A.speak(r.char)) }, r.char),
         (r.variants || []).length ? h("div.muted.small", `${t("rad.variants")}: `, h("span", { lang: "zh-CN" }, [].concat(r.variants).join(" "))) : null,
         box,
         h("div.gloss.wc-gloss", glossPair(r), aiTag(r)),

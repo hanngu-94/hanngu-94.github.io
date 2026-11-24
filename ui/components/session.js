@@ -188,7 +188,7 @@ export function resultScreen(root, { title, acc, xp = 0, stars = 0, wordIds = []
                 const w = A.getWord((q.wordIds || [])[0]);
                 return h(
                   "li.miss",
-                  { onclick: () => w && A.speakWord(w) },
+                  { tabindex: "0", role: "button", onclick: () => w && A.speakWord(w), onkeydown: (e) => w && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), A.speakWord(w)) },
                   h("b", { lang: "zh-CN" }, w?.h || q.prompt?.zh || "—"),
                   h("small", w?.py || q.prompt?.py || ""),
                   h("span", w ? glossInline(w) : q.prompt?.vi || q.prompt?.en || ""),
@@ -218,7 +218,7 @@ export function resultScreen(root, { title, acc, xp = 0, stars = 0, wordIds = []
             "ul.result-words",
             words.map((w) => {
               const m = perWord.get(w.id) || 0;
-              return h(`li${m ? ".miss" : ""}`, { onclick: () => A.speakWord(w) }, h("b", { lang: "zh-CN" }, w.h), h("small", w.py), h("span", glossInline(w)), h("i", m ? t("r.missed", { n: m }) : "✓"));
+              return h(`li${m ? ".miss" : ""}`, { tabindex: "0", role: "button", onclick: () => A.speakWord(w), onkeydown: (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), A.speakWord(w)) }, h("b", { lang: "zh-CN" }, w.h), h("small", w.py), h("span", glossInline(w)), h("i", m ? t("r.missed", { n: m }) : "✓"));
             }),
           )
         : null,

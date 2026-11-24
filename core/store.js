@@ -88,6 +88,7 @@ export function migrate(raw) {
 let storage; // undefined = chưa dò; null = không có
 let state = null;
 const listeners = new Set();
+const changeListeners = new Set(); // móc cho core/sync.js: biết PHẦN NÀO vừa đổi
 
 function getStorage() {
   if (storage === undefined) {
@@ -121,7 +122,12 @@ function cur() {
   return state;
 }
 
-export function save() {
+/**
+ * Lưu state rồi báo người nghe. `change` mô tả phần vừa đổi cho onChange:
+ * { type: "card", id } | { type: "xp", day } | { type: "streak", day? } | { type: "unit", key } | { type: "settings" } |
+ * { type: "stats" } | { type: "badges" } | { type: "set" } | { type: "import" } | { type: "reset" } | { type: "remote" } | { type: "unknown" }
+ */
+export function save(change = { type: "unknown" }) {
   const s = cur();
   try {
     getStorage()?.setItem(KEY, JSON.stringify(s));
@@ -135,6 +141,13 @@ export function save() {
       /* lỗi của người nghe không làm hỏng việc lưu */
     }
   });
+  changeListeners.forEach((fn) => {
+    try {
+      fn(change, s);
+    } catch {
+      /* như trên */
+    }
+  });
 }
 
 export function getState() {
@@ -146,13 +159,32 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+/** Móc thay đổi (đồng bộ dùng): gọi `fn(change, state)` sau mỗi lần lưu; `change.type` xem ở save(). Trả về hàm hủy. */
+export function onChange(fn) {
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
+}
+
+/** Thay cả state bằng bản đã gộp với đám mây (core/sync.js gọi). Báo change { type: "remote" } để không đồng bộ vòng lại. */
+export function applyRemote(next) {
+  state = migrate(next);
+  save({ type: "remote" });
+  return state;
+}
+
 /** Gộp nông vào state; riêng `settings` được gộp từng khóa và kiểm giá trị. */
 export function set(patch = {}) {
   const s = cur();
   const next = { ...s, ...patch };
-  if (patch.settings) next.settings = cleanSettings({ ...s.settings, ...patch.settings });
+  let settingsChanged = false;
+  if (patch.settings) {
+    next.settings = cleanSettings({ ...s.settings, ...patch.settings });
+    settingsChanged = JSON.stringify(next.settings) !== JSON.stringify(s.settings);
+    if (settingsChanged) next.settingsAt = Date.now(); // mốc để gộp "cài đặt lấy bản mới hơn" khi đồng bộ
+  }
   state = next;
-  save();
+  const onlySettings = Object.keys(patch).every((k) => k === "settings");
+  save({ type: onlySettings ? "settings" : "set" });
   return state;
 }
 
@@ -183,15 +215,17 @@ export function checkStreak(now = Date.now()) {
   const s = cur();
   const gap = daysBetween(s.lastActive, dayKey(now));
   if (gap === Infinity || gap <= 1) return s.streak;
+  let frozenDay;
   if (gap === 2 && s.freezes > 0) {
     s.freezes -= 1;
     const y = dayKey(now - DAY);
     s.history[y] = { ...(s.history[y] || { xp: 0, words: 0 }), frozen: true };
     s.lastActive = y;
+    frozenDay = y;
   } else {
     s.streak = 0;
   }
-  save();
+  save({ type: "streak", day: frozenDay });
   return s.streak;
 }
 
@@ -220,7 +254,7 @@ export function addXp(amount, words = 0, now = Date.now()) {
   }
   const goal = s.settings.dailyGoal;
   const goalReached = before < goal && entry.xp >= goal;
-  save();
+  save({ type: "xp", day: today });
   return { streakUp, goalReached, streak: s.streak, todayXp: entry.xp };
 }
 
@@ -235,7 +269,7 @@ export function review(id, grade, now = Date.now()) {
   const s = cur();
   const c = schedule(s.cards[id], grade, now);
   s.cards[id] = c;
-  save();
+  save({ type: "card", id });
   return c;
 }
 
@@ -280,7 +314,7 @@ export function finishUnit(lv, u, acc) {
   s.units[key] = { stars: Math.max(stars, prev?.stars || 0), best: Math.max(accuracy, prev?.best || 0), at: Date.now() };
   s.stats.lessons += 1;
   if (accuracy >= 0.999) s.stats.perfect += 1;
-  save();
+  save({ type: "unit", key });
   return stars;
 }
 
@@ -294,7 +328,7 @@ export function nextUnit(lv, total) {
 export function bumpStat(name, by = 1) {
   const s = cur();
   s.stats[name] = (s.stats[name] || 0) + by;
-  save();
+  save({ type: "stats" });
   return s.stats[name];
 }
 
@@ -303,7 +337,7 @@ export function recordTest(percent) {
   const s = cur();
   s.stats.tests += 1;
   s.stats.bestTest = Math.max(s.stats.bestTest || 0, Math.round(Number(percent) || 0));
-  save();
+  save({ type: "stats" });
 }
 
 // ---------------- Huy hiệu ----------------
@@ -335,7 +369,7 @@ export function checkBadges() {
       fresh.push(b);
     }
   }
-  if (fresh.length) save();
+  if (fresh.length) save({ type: "badges" });
   return fresh;
 }
 
@@ -353,12 +387,12 @@ export function importJson(text) {
     throw new Error("File không đúng định dạng sao lưu của app.");
   }
   state = migrate(incoming);
-  save();
+  save({ type: "import" });
   return state;
 }
 
 export function resetAll() {
   state = defaults();
-  save();
+  save({ type: "reset" });
   return state;
 }
