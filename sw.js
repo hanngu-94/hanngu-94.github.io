@@ -1,5 +1,5 @@
 // Service worker: lưu sẵn khung app (ui/, core/) + dữ liệu (data/vocab, data/ref) để học offline.
-const VERSION = "hsk-v2-ui-13";
+const VERSION = "hsk-v2-ui-14";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "icon.svg",
   "ui/styles/tokens.css", "ui/styles/app.css",
