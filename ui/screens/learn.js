@@ -45,7 +45,7 @@ export async function viewWelcome(root) {
                 renderStep();
               },
             },
-            h("span.wi", "🇻🇳"),
+            h("span.wi.lang-badge", { "aria-hidden": "true" }, "VI"),
             h("b", "Tiếng Việt"),
             h("small", t("wel.viSub")),
           ),
@@ -60,7 +60,7 @@ export async function viewWelcome(root) {
                 renderStep();
               },
             },
-            h("span.wi", "🇬🇧"),
+            h("span.wi.lang-badge", { "aria-hidden": "true" }, "EN"),
             h("b", "English"),
             h("small", t("wel.enSub")),
           ),

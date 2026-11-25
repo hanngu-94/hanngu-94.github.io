@@ -85,6 +85,9 @@ body.in-session .content { margin-left: 0; padding-bottom: 0; }
 .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
 .btn.primary { background: var(--brand); color: #fff; border-color: transparent; box-shadow: 0 3px 0 color-mix(in srgb, var(--brand) 60%, #000); }
 .btn.primary:disabled { opacity: 0.45; }
+/* Nút bị khóa phải trông bị khóa (KCS lần 6 M5); .btn.primary giữ luật riêng ở trên */
+.btn:not(.primary):disabled, .icon-btn:disabled, .icon-btn[aria-disabled="true"] { opacity: 0.5; box-shadow: none; }
+.icon-btn[aria-disabled="true"] { cursor: default; }
 .btn.light { background: #fff; color: var(--brand-on-light); border-color: transparent; }
 .btn.outline-light { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.6); box-shadow: none; }
 .btn.ghost { background: transparent; box-shadow: none; }
@@ -678,3 +681,96 @@ span.gl-sep { color: var(--ink-3); font-weight: 400; }
 .soon-tag { display: inline-block; font-size: var(--fs-xs); font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); border: 1px dashed var(--line-strong); white-space: nowrap; vertical-align: middle; }
 .level-opt.soon, .level-strip button.soon, .lv-row.soon { cursor: not-allowed; border-style: dashed; color: var(--ink-2); }
 .level-opt.soon .lv-badge, .lv-row.soon .lv-badge { filter: grayscale(1); }
+
+/* =====================================================================
+   NHÃN NGÔN NGỮ VI / EN (thay emoji cờ để hiển thị đồng nhất mọi OS)
+   ===================================================================== */
+.lang-badge {
+  display: inline-grid; place-items: center;
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--brand-soft); color: var(--brand-text);
+  font-size: 0.95rem; font-weight: 800; letter-spacing: 0.04em;
+  border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent);
+  margin: 0 auto;
+}
+.lang-badge.sm {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: auto; height: auto; min-width: 24px; padding: 1px 6px;
+  border-radius: 6px; font-size: 0.72rem; margin: 0 2px 0 0; vertical-align: baseline;
+}
+.vn-cmp { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+
+/* =====================================================================
+   TÀI KHOẢN & ĐỒNG BỘ (GIAO-ANTIGRAVITY-ACCOUNT)
+   ===================================================================== */
+.acc-card { display: flex; flex-direction: column; gap: 10px; }
+.acc-signed-out { display: flex; flex-direction: column; gap: 10px; }
+.acc-btn-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.btn-google {
+  background: #ffffff; color: #1f1f1f; border: 1.5px solid #dadce0;
+  box-shadow: 0 2px 0 #dadce0; font-weight: 700;
+}
+.btn-google:hover:not(:disabled) { background: #f8f9fa; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .btn-google {
+    background: #131314; color: #e3e3e3; border-color: #8e918f; box-shadow: 0 2px 0 #000;
+  }
+  :root:not([data-theme="light"]) .btn-google:hover:not(:disabled) { background: #1e1f20; }
+}
+:root[data-theme="dark"] .btn-google {
+  background: #131314; color: #e3e3e3; border-color: #8e918f; box-shadow: 0 2px 0 #000;
+}
+:root[data-theme="dark"] .btn-google:hover:not(:disabled) { background: #1e1f20; }
+.g-logo { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; }
+
+.acc-user-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.acc-avatar {
+  width: 48px; height: 48px; border-radius: 50%; flex: none; overflow: hidden;
+  background: var(--brand); color: var(--brand-ink);
+  display: inline-grid; place-items: center; font-weight: 800; font-size: 1.2rem;
+}
+.acc-avatar.sm { width: 28px; height: 28px; font-size: 0.78rem; }
+.acc-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.acc-user-info { flex: 1; min-width: 0; }
+.acc-name { display: block; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-sync-btn { flex: none; border: 1px solid var(--line); background: var(--surface-2); }
+
+.acc-status {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  font-size: var(--fs-sm); font-weight: 600;
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  background: var(--surface-2); color: var(--ink);
+}
+/* Chữ dùng --ink (--ok trên --ok-bg chỉ 4,495:1, dưới 4,5:1 — KCS lần 6 L1); màu trạng thái nằm ở biểu tượng */
+.acc-status.st-ok { background: var(--ok-bg); color: var(--ink); }
+.acc-status.st-ok .acc-ico { color: var(--ok); }
+.acc-status[hidden], .acc-retry[hidden] { display: none; }
+.acc-status.st-pending { background: var(--warn-bg); color: var(--warn-ink); }
+.acc-status.st-syncing { background: var(--info-bg); color: var(--info); }
+.acc-status.st-offline { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+.acc-status.st-error { background: var(--bad-bg); color: var(--bad); }
+.acc-ico { font-weight: 800; flex: none; }
+.acc-retry { margin-left: auto; color: inherit; font-weight: 800; min-height: var(--tap); display: inline-flex; align-items: center; }
+
+.acc-spin { display: inline-block; animation: acc-rot 1s linear infinite; font-weight: 800; }
+@keyframes acc-rot { to { transform: rotate(360deg); } }
+
+.acc-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.acc-privacy-note { margin: 0; line-height: 1.45; }
+/* Link nằm trong câu: không đệm, không ép 44 px, để dấu chấm đứng sát chữ (KCS lần 6 L6) */
+.acc-privacy-note .link { padding: 0; min-width: 0; min-height: 0; font-size: inherit; }
+.acc-label { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2); margin-bottom: -6px; }
+.acc-msg { margin: 0; min-height: 0; }
+.acc-msg:empty { display: none; }
+.acc-msg.err { color: var(--bad); font-weight: 600; }
+
+.acc-dialog { display: flex; flex-direction: column; gap: 12px; padding-right: 12px; overflow-wrap: anywhere; }
+.acc-form { display: flex; flex-direction: column; gap: 12px; }
+.acc-inbox { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 8px 0; }
+.acc-envelope { display: inline-flex; margin-bottom: 4px; }
+
+.privacy-doc { display: flex; flex-direction: column; gap: 10px; line-height: 1.65; }
+.privacy-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.privacy-doc code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-size: 0.9em; }
+

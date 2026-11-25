@@ -3,6 +3,7 @@ import { h, clear, toast, pct, fmtNumber, go } from "../components/dom.js";
 import { t, lang, applyLang } from "../i18n.js";
 import * as A from "../api.js";
 import { switchLevel, soonTag } from "./learn.js";
+import { accountCard, getCurrentUser } from "../components/account.js";
 
 const lvColor = (lv) => `var(--lv${Math.min(7, Number(lv) || 1)})`;
 
@@ -18,6 +19,7 @@ export async function viewMe(root) {
   const badges = A.BADGES();
   clear(root).append(
     h("header.page-head", h("h1", t("me.title"))),
+    accountCard({ mode: "me" }),
     h(
       "div.stat-grid",
       bigStat("🔥", s.streak || 0, t("me.streak"), `${t("me.bestStreak", { n: s.bestStreak ?? s.streak ?? 0 })}${s.freezes ? ` · ${t("me.freezes", { n: s.freezes })}` : ""}`),
@@ -86,7 +88,7 @@ function heatmap(hist) {
 
 // =============== CÀI ĐẶT ===============
 
-export async function viewSettings(root) {
+export async function viewSettings(root, section) {
   await A.index();
   const s = A.settings();
   const voices = A.chineseVoices();
@@ -160,6 +162,7 @@ export async function viewSettings(root) {
       ),
       row(t("set.sound"), toggle(Boolean(s.sound), (v) => A.setSetting({ sound: v }), t("set.sound"))),
     ),
+    accountCard({ mode: "settings", onRefresh: rerender }),
     h(
       "section.card.settings",
       h("h2", t("set.data")),
@@ -167,13 +170,16 @@ export async function viewSettings(root) {
         "div.settings-actions",
         h("button.btn", { type: "button", onclick: download }, `⬇ ${t("set.backup")}`),
         h("button.btn", { type: "button", onclick: () => fileInput.click() }, `⬆ ${t("set.restore")}`),
-        h("button.btn.danger", { type: "button", onclick: () => confirm(t("set.resetConfirm")) && (A.S.resetAll(), A.resetUiPrefs(), applyLang(), applyTheme(), toast(t("set.resetDone")), go("#/welcome")) }, t("set.reset")),
+        h("button.btn.danger", { type: "button", onclick: () => confirm(getCurrentUser() ? t("acc.resetConfirmCloud") : t("set.resetConfirm")) && (A.S.resetAll(), A.resetUiPrefs(), applyLang(), applyTheme(), toast(t("set.resetDone")), go("#/welcome")) }, t("set.reset")),
         fileInput,
       ),
       h("p.muted.small", t("set.dataHelp")),
     ),
     h("div.link-row", h("a.btn", { href: "#/placement" }, `🧭 ${t("set.placement")}`), h("a.btn", { href: "#/about" }, `ℹ️ ${t("nav.about")}`)),
   );
+  if (section === "account") {
+    root.querySelector("#account")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 export function applyTheme() {
@@ -229,5 +235,29 @@ export async function viewAbout(root) {
       h("p.muted.small", t("ab.reviewPdf")),
     ),
     h("section.card", h("h2", t("ab.offlineTitle")), h("p", t("ab.offline")), h("p.muted.small", t("ab.speech"))),
+    h(
+      "section.card",
+      h("h2", t("ab.privacyTitle")),
+      h("p", t("ab.githubContact")),
+      h(
+        "div.link-row",
+        h("a.btn", { href: "#/privacy" }, `🔒 ${t("acc.privacy")}`),
+        projectGithubUrl() ? h("a.btn", { href: projectGithubUrl(), target: "_blank", rel: "noopener noreferrer" }, `🐙 ${t("ab.githubLink")}`) : null,
+      ),
+    ),
   );
+}
+
+/** Tạo link GitHub từ tên miền GitHub Pages (*.github.io/<repo>); nơi khác không đoán được thì trả null để ẩn nút (KCS lần 6 L4). */
+function projectGithubUrl() {
+  try {
+    const m = location.hostname.match(/^([^.]+)\.github\.io$/i);
+    if (m) {
+      const repo = location.pathname.split("/").filter(Boolean)[0];
+      if (repo) return `https://github.com/${m[1]}/${repo}/issues`;
+    }
+  } catch {
+    /* bỏ qua */
+  }
+  return null;
 }

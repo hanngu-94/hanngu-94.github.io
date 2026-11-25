@@ -1,11 +1,11 @@
 // Service worker: lưu sẵn khung app (ui/, core/) + dữ liệu (data/vocab, data/ref) để học offline.
-const VERSION = "hsk-v2-ui-11";
+const VERSION = "hsk-v2-ui-13";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "icon.svg",
   "ui/styles/tokens.css", "ui/styles/app.css",
   "ui/app.js", "ui/api.js", "ui/i18n.js", "ui/writer.js",
-  "ui/components/dom.js", "ui/components/word.js", "ui/components/questions.js", "ui/components/session.js",
-  "ui/screens/learn.js", "ui/screens/practice.js", "ui/screens/lookup.js", "ui/screens/me.js",
+  "ui/components/dom.js", "ui/components/word.js", "ui/components/questions.js", "ui/components/session.js", "ui/components/account.js",
+  "ui/screens/learn.js", "ui/screens/practice.js", "ui/screens/lookup.js", "ui/screens/me.js", "ui/screens/privacy.js",
   "core/pinyin.js", "core/content.js", "core/srs.js", "core/store.js", "core/lesson.js", "core/scoring.js", "core/speech.js",
   "core/firebase-config.js", "core/sync.js", "core/sync-merge.js",
   "data/vocab/index.json",

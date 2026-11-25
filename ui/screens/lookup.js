@@ -429,7 +429,7 @@ async function tones(body) {
             ),
             ["desc", "rule", "explain", ""].map((b) => glossPair(it, b)).find((x) => x.length) || null,
             one ? h("div.muted.small", glossPair(one)) : null,
-            it.vn_compare && lang() !== "en" ? h("p.small", `🇻🇳 ${it.vn_compare}`) : null,
+            it.vn_compare && lang() !== "en" ? h("p.small.vn-cmp", h("span.lang-badge.sm", { "aria-hidden": "true" }, "VI"), " ", it.vn_compare) : null,
             L(it, "tip") ? h("p.muted.small", L(it, "tip")) : null,
             examples(it.examples || it.ex || []),
           );

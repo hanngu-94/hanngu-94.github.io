@@ -7,8 +7,9 @@ import * as S from "../core/store.js";
 import * as L from "../core/lesson.js";
 import * as SC from "../core/scoring.js";
 import * as SP from "../core/speech.js";
+import * as SY from "../core/sync.js";
 
-export { C, P, S, L, SRS, SP };
+export { C, P, S, L, SRS, SP, SY };
 
 export const UNIT_SIZE = L.UNIT_SIZE || 8;
 export const UNITS_PER_CHAPTER = 5;
@@ -240,6 +241,7 @@ export function setToneColors(on) {
   const p = readUiPrefs();
   p.toneColors = Boolean(on);
   writeUiPrefs(p);
+  SY.notifyPrefsChanged?.();
 }
 
 export const bookmarks = () => Array.isArray(readUiPrefs().bookmarks) ? readUiPrefs().bookmarks : [];
@@ -252,6 +254,7 @@ export function toggleBookmark(id) {
   else list.unshift(id);
   p.bookmarks = list;
   writeUiPrefs(p);
+  SY.notifyPrefsChanged?.();
   return idx < 0;
 }
 
@@ -264,11 +267,13 @@ export function addSearchHistory(q) {
   list.unshift(clean);
   p.searchHistory = list.slice(0, 8);
   writeUiPrefs(p);
+  SY.notifyPrefsChanged?.();
 }
 export function clearSearchHistory() {
   const p = readUiPrefs();
   p.searchHistory = [];
   writeUiPrefs(p);
+  SY.notifyPrefsChanged?.();
 }
 
 /** Xóa tùy chọn UI khi người dùng chọn "Xóa tiến độ" (KCS L4). */

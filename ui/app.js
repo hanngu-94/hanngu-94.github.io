@@ -6,13 +6,15 @@ import { viewWelcome, viewPlacement, viewHome, viewLesson, levelPicker } from ".
 import { viewReview, viewPractice, viewDrill, viewFlash, viewTest } from "./screens/practice.js";
 import { viewLookup } from "./screens/lookup.js";
 import { viewMe, viewSettings, viewAbout, applyTheme } from "./screens/me.js";
+import { viewPrivacy } from "./screens/privacy.js";
+import { isSyncEnabled, getCurrentUser, userAvatar, openConfirmEmailSheet, takeSignInMsg } from "./components/account.js";
 
 const NAV = [
   { hash: "#/", icon: "🏯", key: "nav.learn", match: /^#\/?(lesson.*)?$/ },
   { hash: "#/review", icon: "🔁", key: "nav.review", match: /^#\/review/ },
   { hash: "#/practice", icon: "🎯", key: "nav.practice", match: /^#\/(practice|drill|flash|test)/ },
   { hash: "#/ref", icon: "📖", key: "nav.lookup", match: /^#\/(ref|lookup)/ },
-  { hash: "#/me", icon: "👤", key: "nav.me", match: /^#\/(me|settings|about)/ },
+  { hash: "#/me", icon: "👤", key: "nav.me", match: /^#\/(me|settings|about|privacy)/ },
 ];
 const SIDE_EXTRA = [
   { hash: "#/settings", icon: "⚙️", key: "nav.settings", match: /^#\/settings/ },
@@ -48,10 +50,11 @@ syncOffline();
 
 function navItem(n, hash, due) {
   const on = n.match.test(hash) && !(n.key === "nav.me" && SIDE_EXTRA.some((x) => x.match.test(hash)) && window.matchMedia("(min-width: 900px)").matches);
+  const user = n.hash === "#/me" && isSyncEnabled() ? getCurrentUser() : null;
   return h(
     `a.nav-item${on ? ".on" : ""}${n.extra ? ".side-only" : ""}`,
     { href: n.hash, "aria-current": on ? "page" : null },
-    h("span.ni", { "aria-hidden": "true" }, n.icon),
+    user ? userAvatar(user, 28) : h("span.ni", { "aria-hidden": "true" }, n.icon),
     h("span.nl", t(n.key)),
     n.hash === "#/review" && due ? h("span.badge-count", { "aria-label": t("path.dueN", { n: due }) }, due > 99 ? "99+" : String(due)) : null,
   );
@@ -133,10 +136,13 @@ async function route() {
         await viewMe(main);
         break;
       case "settings":
-        await viewSettings(main);
+        await viewSettings(main, parts[1]);
         break;
       case "about":
         await viewAbout(main);
+        break;
+      case "privacy":
+        await viewPrivacy(main);
         break;
       default:
         return go("#/");
@@ -174,13 +180,62 @@ try {
   console.warn(e);
 }
 document.documentElement.dataset.ready = "1";
-A.index()
+const booted = A.index()
   .then(route)
   .catch((e) => {
     console.error(e);
     clear(main).append(h("div.empty", h("div.empty-icon", "⚠️"), h("h2", t("app.error")), h("p.muted", e.message), h("button.btn.primary", { type: "button", onclick: () => location.reload() }, t("app.reload"))));
     toast(e.message, "bad", 5000);
   });
+
+// Đồng bộ tài khoản (§1): gọi init() một lần sau khi vẽ khung, KHÔNG await
+if (A.SY.isEnabled()) {
+  let confirmOpen = false;
+  let lastRemoteAt = A.SY.status()?.remoteAppliedAt || 0;
+  let cloudDelShown = false;
+  let hadUser = Boolean(A.SY.currentUser());
+  A.SY.onStatus((st) => {
+    if (st.needEmail && !confirmOpen) {
+      confirmOpen = true;
+      // Chỉ mở hộp sau khi lần route() đầu xong, và sau lượt hashchange mà route() có thể vừa gây ra (go("#/welcome")):
+      // nếu không closeAllSheets() đóng hộp ngay khi vừa mở (KCS lần 6 M4b).
+      booted.finally(() =>
+        setTimeout(() => {
+          if (A.SY.status().needEmail) openConfirmEmailSheet({ onDismiss: () => (confirmOpen = false) });
+          else confirmOpen = false;
+        }, 0),
+      );
+    } else if (!st.needEmail) {
+      confirmOpen = false;
+    }
+    // Khử lặp theo trạng thái (status() của lõi trả object error mới mỗi lần, không so tham chiếu được — KCS lần 6 M2)
+    const cloudDel = st.error?.code === "sync/cloud-deleted";
+    if (cloudDel && !cloudDelShown) toast(t("acc.cloudDeleted"), "info", 6000);
+    cloudDelShown = cloudDel;
+    const hasUser = Boolean(st.user);
+    // Nơi duy nhất báo "Đã đăng nhập"; lời báo theo ý định mà account.js đặt trước khi gọi lõi (KCS lần 6 M1)
+    if (hasUser && !hadUser) toast(takeSignInMsg() === "acc.signedInSyncing" ? t("acc.signedInSyncing") : t("acc.signedIn"), "good");
+    if (hasUser !== hadUser) {
+      hadUser = hasUser;
+      renderNav();
+    }
+    if (st.remoteAppliedAt && st.remoteAppliedAt > lastRemoteAt) {
+      lastRemoteAt = st.remoteAppliedAt;
+      applyLang();
+      applyTheme();
+      // Đang giữa phiên học, đang mở bảng trượt hoặc đang gõ: chỉ vẽ lại thanh trên + nav, không đóng hộp / xóa chữ đang gõ;
+      // màn sẽ được vẽ lại ở lần đổi route kế tiếp (KCS lần 6 L7).
+      const busy = document.body.classList.contains("in-session") || document.querySelector(".sheet-wrap") || document.activeElement?.matches?.("input, textarea, select");
+      if (busy) {
+        renderTop();
+        renderNav();
+      } else {
+        route();
+      }
+    }
+  });
+  A.SY.init();
+}
 
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
